@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trending Vacation Spots</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <h1>Discover Trending Vacation Spots</h1>
+    <div class="budget-container">
+        <p>Enter your budget:</p>
+        <input type="number" id="budget" placeholder="Enter your budget" step="100">
+        <button onclick="findVacations()">Find Vacations</button>
+    </div>
+
+    <!-- Results section removed -->
+
+    <div id="results" class="vacation-container"></div>
+
+    <!-- Embed Dialogflow Chatbot -->
+    <div class="chatbox-container">
+        <!-- Toggle Button for Chatbot -->
+        <button class="chatbox-toggle" onclick="toggleChatbox()">Chat with Us</button>
+        <iframe 
+            id="chatbotIframe"
+            allow="microphone;" 
+            width="350" 
+            height="450" 
+            src="https://console.dialogflow.com/api-client/demo/embedded/0be0ec8f-0821-45d8-8d9f-01f0568181f4" 
+            style="display: none;">
+        </iframe>
+    </div>
+    
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+
+        function findVacations() {
+            const budget = document.getElementById('budget').value;
+            fetch(`/api/vacations?budget=${budget}`)
+                .then(response => response.json())
+                .then(data => displayResults(data))
+                .catch(error => console.error('Error:', error));
+        }
+
+        function displayResults(data) {
+            const results = document.getElementById('results');
+            results.innerHTML = '';
+            data.forEach(vacation => {
+                const card = document.createElement('a');
+                card.className = 'vacation-card';
+                card.href = vacation.url;
+                card.target = "_blank";
+                card.innerHTML = `
+                    <img src="${vacation.image}" alt="${vacation.name}" class="vacation-image">
+                    <h3>${vacation.name}</h3>
+                    <p>Cost: $${vacation.cost}</p>
+                    <p>Rating: ${vacation.rating} ⭐</p>
+                `;
+                results.appendChild(card);
+            });
+        }
+
+        socket.on('updateRatings', (updatedSpots) => {
+            const budget = document.getElementById('budget').value;
+            const filteredSpots = updatedSpots
+                .filter(spot => spot.cost <= budget)
+                .sort((a, b) => b.rating - a.rating);
+            displayResults(filteredSpots);
+        });
+
+        // Toggle function for Chatbot
+        function toggleChatbox() {
+            const iframe = document.getElementById("chatbotIframe");
+            const button = document.querySelector(".chatbox-toggle");
+
+            // Toggle iframe visibility
+            if (iframe.style.display === "none") {
+                iframe.style.display = "block";  // Show the chatbot iframe
+                button.textContent = "Close Chat";  // Change the button text to "Close Chat"
+            } else {
+                iframe.style.display = "none";  // Hide the chatbot iframe
+                button.textContent = "Chat with Us";  // Change the button text back to "Chat with Us"
+            }
+        }
+    </script>
+
+</body>
+</html>
